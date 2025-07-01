@@ -617,7 +617,8 @@ st.markdown("---")
 st.markdown(
     "<div style='text-align: center; color: #666666; font-size: 0.9rem;'>"
     "본 시스템은 건강 위험도 평가를 위한 참고 도구입니다.<br>"
-    "정확한 건강 상태는 전문의와 상담하시기 바랍니다."
+    "정확한 건강 상태는 전문의와 상담하시기 바랍니다.<br>"
+    "by BJ"
     "</div>", 
     unsafe_allow_html=True
 )
