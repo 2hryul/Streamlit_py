@@ -1,7 +1,6 @@
 # health_risk_app_with_bar_charts.py
 import streamlit as st
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+import pandas as pd
 import numpy as np
 
 # 모바일 최적화된 페이지 설정
@@ -106,15 +105,121 @@ st.markdown("""
     
     .risk-summary {
         text-align: center;
-        padding: 0.5rem;
+        padding: 0.8rem;
         border-radius: 8px;
         margin-top: 0.5rem;
         font-weight: bold;
+        font-size: 1.1rem;
     }
     
-    .risk-low { background: #d4edda; color: #155724; }
-    .risk-medium { background: #fff3cd; color: #856404; }
-    .risk-high { background: #f8d7da; color: #721c24; }
+    .risk-low { 
+        background: linear-gradient(135deg, #d4edda, #c3e6cb);
+        color: #155724;
+        border: 2px solid #b1dfbb;
+    }
+    .risk-medium { 
+        background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+        color: #856404;
+        border: 2px solid #f1c40f;
+    }
+    .risk-high { 
+        background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+        color: #721c24;
+        border: 2px solid #e74c3c;
+    }
+    
+    /* 프로그레스 바 스타일 */
+    .progress-container {
+        background: #e9ecef;
+        height: 25px;
+        border-radius: 12px;
+        overflow: hidden;
+        margin: 0.5rem 0;
+        position: relative;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .progress-bar {
+        height: 100%;
+        border-radius: 12px;
+        transition: width 1s ease-in-out;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    
+    .progress-low { 
+        background: linear-gradient(90deg, #28a745, #20c997);
+    }
+    .progress-medium { 
+        background: linear-gradient(90deg, #ffc107, #fd7e14);
+    }
+    .progress-high { 
+        background: linear-gradient(90deg, #dc3545, #e74c3c);
+    }
+    
+    .score-display {
+        background: #fff;
+        border: 3px solid #007bff;
+        border-radius: 50%;
+        width: 80px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 1rem auto;
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #007bff;
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .score-display.updated {
+        animation: scoreUpdate 1s ease-in-out;
+        transform: scale(1.1);
+    }
+    
+    .comparison-bars {
+        display: flex;
+        align-items: end;
+        justify-content: center;
+        gap: 20px;
+        margin: 1rem 0;
+        height: 200px;
+    }
+    
+    .bar {
+        width: 60px;
+        background: linear-gradient(to top, #007bff, #0056b3);
+        border-radius: 4px 4px 0 0;
+        position: relative;
+        transition: all 0.8s ease;
+        display: flex;
+        align-items: end;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        padding-bottom: 8px;
+    }
+    
+    .bar.prev {
+        background: linear-gradient(to top, #6c757d, #495057);
+        opacity: 0.5;
+    }
+    
+    .bar-label {
+        position: absolute;
+        bottom: -25px;
+        text-align: center;
+        font-size: 0.8rem;
+        color: #495057;
+        font-weight: bold;
+    }
     
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(20px); }
@@ -127,10 +232,19 @@ st.markdown("""
         100% { transform: scale(1); }
     }
     
+    @keyframes scoreUpdate {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1.1); }
+    }
+    
     @media (max-width: 768px) {
         .main-title { font-size: 1.5rem; }
         .chart-container { padding: 1rem; }
         .value-comparison { flex-direction: column; gap: 0.5rem; }
+        .comparison-bars { height: 150px; }
+        .bar { width: 40px; }
+        .score-display { width: 60px; height: 60px; font-size: 1.2rem; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -243,98 +357,44 @@ def get_risk_info(score, disease_type):
     """위험도 정보 반환"""
     if disease_type == "stroke":
         if score <= 10:
-            return "낮음", "risk-low", "#28a745", "1% 미만"
+            return "낮음", "risk-low", "progress-low", "1% 미만", 25
         elif score <= 22:
-            return "보통", "risk-medium", "#ffc107", "1-3%"
+            return "보통", "risk-medium", "progress-medium", "1-3%", 40
         else:
-            return "높음", "risk-high", "#dc3545", "4% 이상"
+            return "높음", "risk-high", "progress-high", "4% 이상", 40
     elif disease_type == "heart":
         risk_percent = min(30, score * 2)
         if risk_percent < 10:
-            return "낮음", "risk-low", "#28a745", f"{risk_percent}%"
+            return "낮음", "risk-low", "progress-low", f"{risk_percent}%", 35
         elif risk_percent < 20:
-            return "보통", "risk-medium", "#ffc107", f"{risk_percent}%"
+            return "보통", "risk-medium", "progress-medium", f"{risk_percent}%", 35
         else:
-            return "높음", "risk-high", "#dc3545", f"{risk_percent}%"
+            return "높음", "risk-high", "progress-high", f"{risk_percent}%", 35
     else:  # diabetes
         if score <= 4:
-            return "낮음", "risk-low", "#28a745", "기준 대비 1배"
+            return "낮음", "risk-low", "progress-low", "기준 대비 1배", 15
         elif score <= 7:
-            return "보통", "risk-medium", "#ffc107", "기준 대비 2배"
+            return "보통", "risk-medium", "progress-medium", "기준 대비 2배", 15
         else:
-            return "높음", "risk-high", "#dc3545", "기준 대비 3배 이상"
+            return "높음", "risk-high", "progress-high", "기준 대비 3배 이상", 15
 
-def create_comparison_chart(current_score, prev_score, title, disease_type, max_score=50):
-    """비교 막대그래프 생성"""
+def create_comparison_bars(current_score, prev_score, max_score):
+    """비교 막대 HTML 생성"""
+    current_height = min(180, (current_score / max_score) * 180)
+    prev_height = min(180, (prev_score / max_score) * 180) if prev_score > 0 else 0
     
-    # 위험도 정보 가져오기
-    risk_level, risk_class, color, risk_text = get_risk_info(current_score, disease_type)
-    prev_risk_level, _, prev_color, _ = get_risk_info(prev_score, disease_type)
-    
-    # 막대그래프 생성
-    fig = go.Figure()
-    
-    # 이전 값 (회색, 투명)
-    if prev_score > 0:
-        fig.add_trace(go.Bar(
-            x=['이전', '현재'],
-            y=[prev_score, 0],
-            name='이전 값',
-            marker_color='rgba(108, 117, 125, 0.5)',
-            text=[f'{prev_score}', ''],
-            textposition='outside',
-            textfont=dict(size=12, color='#6c757d'),
-            hovertemplate='이전 값: %{y}<extra></extra>'
-        ))
-    
-    # 현재 값 (컬러)
-    fig.add_trace(go.Bar(
-        x=['이전', '현재'],
-        y=[0, current_score],
-        name='현재 값',
-        marker_color=color,
-        text=['', f'{current_score}'],
-        textposition='outside',
-        textfont=dict(size=14, color=color, family='Arial Black'),
-        hovertemplate='현재 값: %{y}<extra></extra>'
-    ))
-    
-    # 위험도 구간 배경 추가
-    if disease_type == "stroke":
-        fig.add_hline(y=10, line_dash="dash", line_color="green", opacity=0.5, annotation_text="낮음 (≤10)")
-        fig.add_hline(y=22, line_dash="dash", line_color="orange", opacity=0.5, annotation_text="보통 (≤22)")
-    elif disease_type == "heart":
-        fig.add_hline(y=10, line_dash="dash", line_color="green", opacity=0.5, annotation_text="낮음 (≤10)")
-        fig.add_hline(y=20, line_dash="dash", line_color="orange", opacity=0.5, annotation_text="보통 (≤20)")
-    else:  # diabetes
-        fig.add_hline(y=4, line_dash="dash", line_color="green", opacity=0.5, annotation_text="낮음 (≤4)")
-        fig.add_hline(y=7, line_dash="dash", line_color="orange", opacity=0.5, annotation_text="보통 (≤7)")
-    
-    # 레이아웃 설정
-    fig.update_layout(
-        title=dict(
-            text=f"{title}<br><span style='font-size:14px; color:{color}'>{risk_level} 위험도 ({risk_text})</span>",
-            x=0.5,
-            font=dict(size=16, color='#495057')
-        ),
-        xaxis=dict(showgrid=False, showline=False, zeroline=False),
-        yaxis=dict(
-            title="위험 점수",
-            showgrid=True,
-            gridcolor='rgba(0,0,0,0.1)',
-            range=[0, max_score],
-            dtick=5
-        ),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-        height=350,
-        margin=dict(l=40, r=40, t=80, b=40),
-        showlegend=False,
-        bargap=0.4,
-        font=dict(family="Arial, sans-serif")
-    )
-    
-    return fig
+    return f"""
+    <div class="comparison-bars">
+        <div class="bar prev" style="height: {prev_height}px;">
+            <div class="bar-label">이전<br>{prev_score}</div>
+            {prev_score if prev_score > 0 else ''}
+        </div>
+        <div class="bar" style="height: {current_height}px;">
+            <div class="bar-label">현재<br>{current_score}</div>
+            {current_score}
+        </div>
+    </div>
+    """
 
 def create_change_indicator(current, prev):
     """변화 지시자 생성"""
@@ -378,15 +438,35 @@ with col1:
     container_class = "chart-container updated" if stroke_changed else "chart-container"
     st.markdown(f'<div class="{container_class}">', unsafe_allow_html=True)
     
-    # 막대그래프
-    stroke_chart = create_comparison_chart(
-        stroke_score, st.session_state.prev_stroke_score, 
-        "🧠 뇌졸중", "stroke", 40
-    )
-    st.plotly_chart(stroke_chart, use_container_width=True, config={'displayModeBar': False})
+    # 제목
+    st.markdown('<div class="chart-title">🧠 뇌졸중 위험도</div>', unsafe_allow_html=True)
     
-    # 변화 정보
+    # 점수 표시
+    score_class = "updated" if stroke_changed else ""
+    st.markdown(f'<div class="score-display {score_class}">{stroke_score}</div>', unsafe_allow_html=True)
+    
+    # 위험도 정보
+    risk_level, risk_class, progress_class, risk_text, max_score = get_risk_info(stroke_score, "stroke")
+    
+    # 프로그레스 바
+    progress_width = min(100, (stroke_score / max_score) * 100)
+    st.markdown(f"""
+    <div class="progress-container">
+        <div class="progress-bar {progress_class}" style="width: {progress_width}%;">
+            {stroke_score}/{max_score}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # 위험도 요약
+    st.markdown(f'<div class="risk-summary {risk_class}">{risk_level} 위험도<br>({risk_text})</div>', unsafe_allow_html=True)
+    
+    # 비교 막대
     if not st.session_state.is_first_run:
+        comparison_html = create_comparison_bars(stroke_score, st.session_state.prev_stroke_score, max_score)
+        st.markdown(comparison_html, unsafe_allow_html=True)
+        
+        # 변화 정보
         change_html = f"""
         <div class="value-comparison">
             <div>
@@ -404,15 +484,35 @@ with col2:
     container_class = "chart-container updated" if heart_changed else "chart-container"
     st.markdown(f'<div class="{container_class}">', unsafe_allow_html=True)
     
-    # 막대그래프
-    heart_chart = create_comparison_chart(
-        heart_score, st.session_state.prev_heart_score, 
-        "❤️ 심혈관질환", "heart", 35
-    )
-    st.plotly_chart(heart_chart, use_container_width=True, config={'displayModeBar': False})
+    # 제목
+    st.markdown('<div class="chart-title">❤️ 심혈관질환 위험도</div>', unsafe_allow_html=True)
     
-    # 변화 정보
+    # 점수 표시
+    score_class = "updated" if heart_changed else ""
+    st.markdown(f'<div class="score-display {score_class}">{heart_score}</div>', unsafe_allow_html=True)
+    
+    # 위험도 정보
+    risk_level, risk_class, progress_class, risk_text, max_score = get_risk_info(heart_score, "heart")
+    
+    # 프로그레스 바
+    progress_width = min(100, (heart_score / max_score) * 100)
+    st.markdown(f"""
+    <div class="progress-container">
+        <div class="progress-bar {progress_class}" style="width: {progress_width}%;">
+            {heart_score}/{max_score}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # 위험도 요약
+    st.markdown(f'<div class="risk-summary {risk_class}">{risk_level} 위험도<br>({risk_text})</div>', unsafe_allow_html=True)
+    
+    # 비교 막대
     if not st.session_state.is_first_run:
+        comparison_html = create_comparison_bars(heart_score, st.session_state.prev_heart_score, max_score)
+        st.markdown(comparison_html, unsafe_allow_html=True)
+        
+        # 변화 정보
         change_html = f"""
         <div class="value-comparison">
             <div>
@@ -430,15 +530,35 @@ with col3:
     container_class = "chart-container updated" if diab_changed else "chart-container"
     st.markdown(f'<div class="{container_class}">', unsafe_allow_html=True)
     
-    # 막대그래프
-    diab_chart = create_comparison_chart(
-        diab_score, st.session_state.prev_diab_score, 
-        "🍬 당뇨병", "diabetes", 15
-    )
-    st.plotly_chart(diab_chart, use_container_width=True, config={'displayModeBar': False})
+    # 제목
+    st.markdown('<div class="chart-title">🍬 당뇨병 위험도</div>', unsafe_allow_html=True)
     
-    # 변화 정보
+    # 점수 표시
+    score_class = "updated" if diab_changed else ""
+    st.markdown(f'<div class="score-display {score_class}">{diab_score}</div>', unsafe_allow_html=True)
+    
+    # 위험도 정보
+    risk_level, risk_class, progress_class, risk_text, max_score = get_risk_info(diab_score, "diabetes")
+    
+    # 프로그레스 바
+    progress_width = min(100, (diab_score / max_score) * 100)
+    st.markdown(f"""
+    <div class="progress-container">
+        <div class="progress-bar {progress_class}" style="width: {progress_width}%;">
+            {diab_score}/{max_score}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # 위험도 요약
+    st.markdown(f'<div class="risk-summary {risk_class}">{risk_level} 위험도<br>({risk_text})</div>', unsafe_allow_html=True)
+    
+    # 비교 막대
     if not st.session_state.is_first_run:
+        comparison_html = create_comparison_bars(diab_score, st.session_state.prev_diab_score, max_score)
+        st.markdown(comparison_html, unsafe_allow_html=True)
+        
+        # 변화 정보
         change_html = f"""
         <div class="value-comparison">
             <div>
@@ -452,51 +572,24 @@ with col3:
     
     st.markdown('</div>', unsafe_allow_html=True)
 
-# 종합 분석 차트
+# 종합 분석
 st.markdown("---")
-st.markdown("### 📈 종합 위험도 비교")
+st.markdown("### 📈 종합 위험도 분석")
 
-# 종합 비교 차트
-comparison_fig = go.Figure()
-
-# 현재 값들
-comparison_fig.add_trace(go.Bar(
-    x=['뇌졸중', '심혈관질환', '당뇨병'],
-    y=[stroke_score, heart_score, diab_score],
-    name='현재 값',
-    marker_color=['#dc3545' if stroke_score > 22 else '#ffc107' if stroke_score > 10 else '#28a745',
-                  '#dc3545' if heart_score > 20 else '#ffc107' if heart_score > 10 else '#28a745',
-                  '#dc3545' if diab_score > 7 else '#ffc107' if diab_score > 4 else '#28a745'],
-    text=[stroke_score, heart_score, diab_score],
-    textposition='outside',
-    textfont=dict(size=14, color='#333')
-))
-
-# 이전 값들 (투명)
+# Streamlit 내장 차트 사용
 if not st.session_state.is_first_run:
-    comparison_fig.add_trace(go.Bar(
-        x=['뇌졸중', '심혈관질환', '당뇨병'],
-        y=[st.session_state.prev_stroke_score, st.session_state.prev_heart_score, st.session_state.prev_diab_score],
-        name='이전 값',
-        marker_color='rgba(108, 117, 125, 0.3)',
-        text=[st.session_state.prev_stroke_score, st.session_state.prev_heart_score, st.session_state.prev_diab_score],
-        textposition='inside',
-        textfont=dict(size=12, color='#6c757d')
-    ))
-
-comparison_fig.update_layout(
-    title="전체 위험도 비교",
-    xaxis_title="질환 유형",
-    yaxis_title="위험 점수",
-    height=400,
-    plot_bgcolor='rgba(0,0,0,0)',
-    paper_bgcolor='rgba(0,0,0,0)',
-    showlegend=True,
-    barmode='group',
-    font=dict(family="Arial, sans-serif")
-)
-
-st.plotly_chart(comparison_fig, use_container_width=True)
+    chart_data = pd.DataFrame({
+        '이전값': [st.session_state.prev_stroke_score, st.session_state.prev_heart_score, st.session_state.prev_diab_score],
+        '현재값': [stroke_score, heart_score, diab_score]
+    }, index=['뇌졸중', '심혈관질환', '당뇨병'])
+    
+    st.bar_chart(chart_data, height=400, use_container_width=True)
+else:
+    chart_data = pd.DataFrame({
+        '현재값': [stroke_score, heart_score, diab_score]
+    }, index=['뇌졸중', '심혈관질환', '당뇨병'])
+    
+    st.bar_chart(chart_data, height=400, use_container_width=True)
 
 # 이전 값들 업데이트
 st.session_state.prev_stroke_score = stroke_score
